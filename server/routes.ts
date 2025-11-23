@@ -45,73 +45,101 @@ export async function registerRoutes(app: Express, skipServer = false): Promise<
     }
   });
 
-  // Calculate tip distribution
-  app.post("/api/distributions/calculate", async (req, res) => {
+  // Calculate and save tip distribution
+  app.post("/api/distributions", async (req, res) => {
     try {
-      const { partnerHours, totalAmount, totalHours, hourlyRate } = req.body;
+      const {
+        partners: partnerHours,
+        totalTips,
+        reportDate,
+        hasUnevenBills,
+        billOnes,
+        billFives,
+        billTens,
+        billTwenties,
+        reportText
+      } = req.body;
 
-      // Validate partner hours
-      try {
-        partnerHoursSchema.parse(partnerHours);
-      } catch (error) {
-        return res.status(400).json({ error: "Invalid partner hours data" });
+      if (!partnerHours || !Array.isArray(partnerHours) || partnerHours.length === 0) {
+        return res.status(400).json({ error: "Partner hours are required" });
       }
 
-      // Calculate payout for each partner
-      const partnerPayouts = partnerHours.map(partner => {
-        const payout = calculatePayout(partner.hours, hourlyRate);
-        const { rounded, billBreakdown } = roundAndCalculateBills(payout);
+      if (!totalTips || totalTips <= 0) {
+        return res.status(400).json({ error: "Total tips amount is required" });
+      }
 
+      const totalHours = partnerHours.reduce((sum, p) => sum + p.hours, 0);
+      const hourlyRate = totalTips / totalHours;
+
+      const distribution = await storage.createTipDistribution({
+        report_date: reportDate || new Date().toISOString().split('T')[0],
+        total_tips: totalTips,
+        total_hours: totalHours,
+        has_uneven_bills: hasUnevenBills || false,
+        bill_ones: billOnes || 0,
+        bill_fives: billFives || 0,
+        bill_tens: billTens || 0,
+        bill_twenties: billTwenties || 0,
+        report_text: reportText || ''
+      });
+
+      const payouts = partnerHours.map(partner => {
+        const tipAmount = partner.hours * hourlyRate;
         return {
-          name: partner.name,
-          hours: partner.hours,
-          payout,
-          rounded,
-          billBreakdown
+          distribution_id: distribution.id,
+          partner_name: partner.name,
+          tippable_hours: partner.hours,
+          tip_amount: tipAmount
         };
       });
 
-      const distributionData = {
-        totalAmount,
-        totalHours,
-        hourlyRate,
-        partnerPayouts
-      };
+      const createdPayouts = await storage.createBulkPartnerPayouts(payouts);
 
-      res.json(distributionData);
-    } catch (error) {
-      console.error("Distribution calculation error:", error);
-      res.status(500).json({ error: "Failed to calculate distribution" });
-    }
-  });
-
-  // Save distribution to history
-  app.post("/api/distributions", async (req, res) => {
-    try {
-      const { totalAmount, totalHours, hourlyRate, partnerData } = req.body;
-
-      const distribution = await storage.createDistribution({
-        totalAmount,
-        totalHours,
-        hourlyRate,
-        partnerData
+      res.status(201).json({
+        distribution,
+        payouts: createdPayouts,
+        hourlyRate
       });
-
-      res.status(201).json(distribution);
     } catch (error) {
-      console.error("Save distribution error:", error);
-      res.status(500).json({ error: "Failed to save distribution" });
+      console.error("Distribution creation error:", error);
+      res.status(500).json({ error: "Failed to create distribution" });
     }
   });
 
-  // Get distribution history
+  // Get distribution history with payouts
   app.get("/api/distributions", async (req, res) => {
     try {
-      const distributions = await storage.getDistributions();
-      res.json(distributions);
+      const distributions = await storage.getTipDistributions();
+
+      const distributionsWithPayouts = await Promise.all(
+        distributions.map(async (dist) => {
+          const payouts = await storage.getPartnerPayouts(dist.id);
+          return { ...dist, payouts };
+        })
+      );
+
+      res.json(distributionsWithPayouts);
     } catch (error) {
       console.error("Get distributions error:", error);
       res.status(500).json({ error: "Failed to retrieve distributions" });
+    }
+  });
+
+  // Get single distribution with payouts
+  app.get("/api/distributions/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const distribution = await storage.getTipDistribution(id);
+
+      if (!distribution) {
+        return res.status(404).json({ error: "Distribution not found" });
+      }
+
+      const payouts = await storage.getPartnerPayouts(id);
+      res.json({ ...distribution, payouts });
+    } catch (error) {
+      console.error("Get distribution error:", error);
+      res.status(500).json({ error: "Failed to retrieve distribution" });
     }
   });
 

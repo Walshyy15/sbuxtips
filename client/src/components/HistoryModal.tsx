@@ -1,14 +1,12 @@
-import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle 
-} from "@/components/ui/dialog";
-import { Distribution } from "@shared/schema";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import { UsersIcon } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { TipDistribution, PartnerPayout } from "@shared/schema";
+import { Users, Clock, DollarSign } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+interface DistributionWithPayouts extends TipDistribution {
+  payouts: PartnerPayout[];
+}
 
 type HistoryModalProps = {
   isOpen: boolean;
@@ -16,74 +14,108 @@ type HistoryModalProps = {
 };
 
 export default function HistoryModal({ isOpen, onClose }: HistoryModalProps) {
-  const { data: distributions, isLoading } = useQuery<Distribution[]>({
+  const { data: distributions, isLoading } = useQuery<DistributionWithPayouts[]>({
     queryKey: ['/api/distributions'],
     enabled: isOpen,
   });
-  
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-[#3a5c5c] border border-[#4c6767] text-[#f5f5f5] sm:max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-4xl max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-[#f5f5f5]">Distribution History</DialogTitle>
+          <DialogTitle className="flex items-center gap-2 text-[hsl(var(--starbucks-green))]">
+            <Clock className="w-5 h-5" />
+            Distribution History
+          </DialogTitle>
         </DialogHeader>
-        
-        <div className="overflow-y-auto flex-grow scrollbar-hidden mt-4">
-          <div className="space-y-4">
+
+        <ScrollArea className="max-h-[calc(90vh-150px)]">
+          <div className="space-y-4 py-4 pr-4">
             {isLoading ? (
               Array(3).fill(0).map((_, i) => (
-                <div key={i} className="p-4 rounded-lg bg-[#364949] animate-pulse">
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="h-6 w-32 bg-[#4c6767] rounded" />
-                    <div className="h-6 w-20 bg-[#4c6767] rounded" />
-                  </div>
-                  <div className="flex items-center">
-                    <div className="h-4 w-48 bg-[#4c6767] rounded" />
-                  </div>
+                <div key={i} className="p-4 rounded-lg bg-[hsl(var(--md-sys-color-surface-variant))] animate-pulse">
+                  <div className="h-6 w-32 bg-gray-300 rounded mb-2" />
+                  <div className="h-4 w-48 bg-gray-300 rounded" />
                 </div>
               ))
             ) : distributions && distributions.length > 0 ? (
               distributions.map((dist) => (
-                <div 
+                <div
                   key={dist.id}
-                  className="bg-[#364949] rounded-lg p-4 border border-[#4c6767] hover:border-[#93ec93] transition-colors cursor-pointer"
+                  className="bg-white border-2 border-[hsl(var(--md-sys-color-outline))] rounded-lg p-5 hover:border-[hsl(var(--starbucks-green))] transition-colors"
                 >
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="font-semibold text-[#f5f5f5]">{formatDate(dist.date)}</h3>
-                    <span className="bg-[rgba(147,236,147,0.2)] text-[#93ec93] px-2 py-1 rounded-md text-xs">
-                      {formatCurrency(dist.totalAmount)}
-                    </span>
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="font-bold text-lg text-[hsl(var(--starbucks-green))]">
+                        {new Date(dist.report_date).toLocaleDateString('en-US', {
+                          month: 'long',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </h3>
+                      <p className="text-sm text-[hsl(var(--starbucks-gray))] mt-1">
+                        Created {new Date(dist.created_at || '').toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-[hsl(var(--starbucks-green))]">
+                        ${dist.total_tips.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-[hsl(var(--starbucks-gray))]">Total Tips</p>
+                    </div>
                   </div>
-                  <div className="flex items-center text-sm text-[#bfbfbf]">
-                    <UsersIcon className="h-4 w-4 mr-2" />
-                    <span>
-                      {Array.isArray(dist.partnerData) 
-                        ? dist.partnerData.length 
-                        : (dist.partnerData && typeof dist.partnerData === 'object' 
-                            ? Object.keys(dist.partnerData as Record<string, unknown>).length 
-                            : 0)} partners
-                    </span>
-                    <span className="mx-2">•</span>
-                    <span>{dist.totalHours} total hours</span>
+
+                  <div className="grid grid-cols-3 gap-4 mb-4">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-[hsl(var(--starbucks-gray))]" />
+                      <span className="text-sm">
+                        {dist.payouts?.length || 0} partners
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-[hsl(var(--starbucks-gray))]" />
+                      <span className="text-sm">
+                        {dist.total_hours.toFixed(2)} hours
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="w-4 h-4 text-[hsl(var(--starbucks-gray))]" />
+                      <span className="text-sm">
+                        ${(dist.total_tips / dist.total_hours).toFixed(2)}/hr
+                      </span>
+                    </div>
                   </div>
+
+                  {dist.payouts && dist.payouts.length > 0 && (
+                    <div className="border-t pt-3">
+                      <p className="text-xs font-semibold text-[hsl(var(--starbucks-gray))] mb-2">
+                        Partner Breakdown
+                      </p>
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {dist.payouts.map((payout) => (
+                          <div key={payout.id} className="flex justify-between text-sm">
+                            <span>{payout.partner_name}</span>
+                            <span className="font-medium text-[hsl(var(--starbucks-green))]">
+                              ${payout.tip_amount.toFixed(2)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))
             ) : (
-              <div className="bg-[#364949] rounded-lg p-6 text-center">
-                <p className="text-[#bfbfbf]">No distribution history yet</p>
+              <div className="bg-[hsl(var(--md-sys-color-surface-variant))] rounded-lg p-8 text-center">
+                <Clock className="w-12 h-12 mx-auto mb-3 text-[hsl(var(--starbucks-gray))]" />
+                <p className="text-[hsl(var(--starbucks-gray))]">No distribution history yet</p>
+                <p className="text-sm text-[hsl(var(--starbucks-gray))] mt-1">
+                  Start by uploading a tip report
+                </p>
               </div>
             )}
           </div>
-        </div>
-        
-        <div className="mt-4 pt-4 border-t border-[#4c6767] flex justify-end">
-          <button 
-            className="btn btn-transparent"
-            onClick={onClose}
-          >
-            Close
-          </button>
-        </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

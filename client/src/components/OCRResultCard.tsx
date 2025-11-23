@@ -1,40 +1,74 @@
-import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { useTipContext } from "@/context/TipContext";
-import { DownloadIcon } from "lucide-react";
+import { Users, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-export default function OCRResultCard() {
-  const { extractedText } = useTipContext();
-  const { toast } = useToast();
-  
-  const handleDownload = () => {
-    if (!extractedText) {
-      toast({
-        title: "No data to download",
-        description: "Please process a schedule first",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // Create a download link for the extracted text
-    const blob = new Blob([extractedText], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `tipjar-extracted-data-${new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    toast({
-      title: "Download started",
-      description: "Extracted data is being downloaded",
-    });
+interface OCRResultCardProps {
+  result: {
+    report: {
+      partners: Array<{ name: string; hours: number }>;
+      totalHours: number;
+    };
+    rawText: string;
   };
-  
-  // We're not displaying the OCR card anymore as requested
-  // but keep the component for its functionality
-  return null;
+  onCalculate: () => void;
+}
+
+export default function OCRResultCard({ result, onCalculate }: OCRResultCardProps) {
+  return (
+    <Card>
+      <CardHeader className="bg-[hsl(var(--starbucks-green))] text-white">
+        <CardTitle className="flex items-center gap-2">
+          <Users className="w-5 h-5" />
+          Extracted Partner Data
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-6 space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-[hsl(var(--md-sys-color-surface-variant))] rounded-lg p-4">
+            <p className="text-sm text-[hsl(var(--starbucks-gray))] mb-1">Total Partners</p>
+            <p className="text-3xl font-bold text-[hsl(var(--starbucks-green))]">
+              {result.report.partners.length}
+            </p>
+          </div>
+          <div className="bg-[hsl(var(--md-sys-color-surface-variant))] rounded-lg p-4">
+            <p className="text-sm text-[hsl(var(--starbucks-gray))] mb-1">Total Hours</p>
+            <p className="text-3xl font-bold text-[hsl(var(--starbucks-green))]">
+              {result.report.totalHours.toFixed(2)}
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="font-semibold text-[hsl(var(--starbucks-green))] mb-3 flex items-center gap-2">
+            <Clock className="w-4 h-4" />
+            Partner Hours Breakdown
+          </h3>
+          <ScrollArea className="h-[300px] border rounded-lg">
+            <div className="p-4 space-y-2">
+              {result.report.partners.map((partner, index) => (
+                <div
+                  key={index}
+                  className="flex justify-between items-center p-3 bg-[hsl(var(--md-sys-color-surface-variant))] rounded-lg"
+                >
+                  <span className="font-medium text-[hsl(var(--starbucks-green))]">{partner.name}</span>
+                  <span className="text-[hsl(var(--starbucks-gray))] font-semibold">
+                    {partner.hours.toFixed(2)} hrs
+                  </span>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </div>
+
+        <Button
+          onClick={onCalculate}
+          className="w-full bg-[hsl(var(--starbucks-green))] hover:bg-[hsl(var(--starbucks-green-dark))] text-white"
+          size="lg"
+        >
+          Calculate Tips
+        </Button>
+      </CardContent>
+    </Card>
+  );
 }

@@ -1,106 +1,155 @@
-import { 
-  users, 
-  type User, 
-  type InsertUser, 
-  partners, 
-  type Partner, 
+import {
+  users,
+  type User,
+  type InsertUser,
+  type Partner,
   type InsertPartner,
-  distributions,
-  type Distribution,
-  type InsertDistribution
+  type TipDistribution,
+  type InsertTipDistribution,
+  type PartnerPayout,
+  type InsertPartnerPayout
 } from "@shared/schema";
+import { createClient } from "@supabase/supabase-js";
 
-// modify the interface with any CRUD methods
-// you might need
+const supabaseUrl = process.env.VITE_SUPABASE_URL!;
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY!;
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export interface IStorage {
   // User methods
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  
+
   // Partner methods
-  getPartner(id: number): Promise<Partner | undefined>;
+  getPartner(id: string): Promise<Partner | undefined>;
   getPartners(): Promise<Partner[]>;
   createPartner(partner: InsertPartner): Promise<Partner>;
-  
-  // Distribution methods
-  getDistribution(id: number): Promise<Distribution | undefined>;
-  getDistributions(): Promise<Distribution[]>;
-  createDistribution(distribution: InsertDistribution): Promise<Distribution>;
+
+  // Tip Distribution methods
+  getTipDistribution(id: string): Promise<TipDistribution | undefined>;
+  getTipDistributions(): Promise<TipDistribution[]>;
+  createTipDistribution(distribution: InsertTipDistribution): Promise<TipDistribution>;
+
+  // Partner Payout methods
+  getPartnerPayouts(distributionId: string): Promise<PartnerPayout[]>;
+  createPartnerPayout(payout: InsertPartnerPayout): Promise<PartnerPayout>;
+  createBulkPartnerPayouts(payouts: InsertPartnerPayout[]): Promise<PartnerPayout[]>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private partners: Map<number, Partner>;
-  private distributions: Map<number, Distribution>;
-  private userId: number;
-  private partnerId: number;
-  private distributionId: number;
-
-  constructor() {
-    this.users = new Map();
-    this.partners = new Map();
-    this.distributions = new Map();
-    this.userId = 1;
-    this.partnerId = 1;
-    this.distributionId = 1;
-  }
-
-  // User methods
+export class SupabaseStorage implements IStorage {
+  // User methods (legacy - not currently used)
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    return undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    return undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+    throw new Error("User creation not implemented");
   }
-  
+
   // Partner methods
-  async getPartner(id: number): Promise<Partner | undefined> {
-    return this.partners.get(id);
+  async getPartner(id: string): Promise<Partner | undefined> {
+    const { data, error } = await supabase
+      .from("partners")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data || undefined;
   }
-  
+
   async getPartners(): Promise<Partner[]> {
-    return Array.from(this.partners.values());
+    const { data, error } = await supabase
+      .from("partners")
+      .select("*")
+      .order("name", { ascending: true });
+
+    if (error) throw error;
+    return data || [];
   }
-  
-  async createPartner(insertPartner: InsertPartner): Promise<Partner> {
-    const id = this.partnerId++;
-    const partner: Partner = { ...insertPartner, id };
-    this.partners.set(id, partner);
-    return partner;
+
+  async createPartner(partner: InsertPartner): Promise<Partner> {
+    const { data, error } = await supabase
+      .from("partners")
+      .insert(partner)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
-  
-  // Distribution methods
-  async getDistribution(id: number): Promise<Distribution | undefined> {
-    return this.distributions.get(id);
+
+  // Tip Distribution methods
+  async getTipDistribution(id: string): Promise<TipDistribution | undefined> {
+    const { data, error } = await supabase
+      .from("tip_distributions")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data || undefined;
   }
-  
-  async getDistributions(): Promise<Distribution[]> {
-    return Array.from(this.distributions.values())
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  async getTipDistributions(): Promise<TipDistribution[]> {
+    const { data, error } = await supabase
+      .from("tip_distributions")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return data || [];
   }
-  
-  async createDistribution(insertDistribution: InsertDistribution): Promise<Distribution> {
-    const id = this.distributionId++;
-    const distribution: Distribution = { 
-      ...insertDistribution, 
-      id, 
-      date: new Date().toISOString() 
-    };
-    this.distributions.set(id, distribution);
-    return distribution;
+
+  async createTipDistribution(distribution: InsertTipDistribution): Promise<TipDistribution> {
+    const { data, error } = await supabase
+      .from("tip_distributions")
+      .insert(distribution)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  // Partner Payout methods
+  async getPartnerPayouts(distributionId: string): Promise<PartnerPayout[]> {
+    const { data, error } = await supabase
+      .from("partner_payouts")
+      .select("*")
+      .eq("distribution_id", distributionId)
+      .order("partner_name", { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  async createPartnerPayout(payout: InsertPartnerPayout): Promise<PartnerPayout> {
+    const { data, error } = await supabase
+      .from("partner_payouts")
+      .insert(payout)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async createBulkPartnerPayouts(payouts: InsertPartnerPayout[]): Promise<PartnerPayout[]> {
+    const { data, error } = await supabase
+      .from("partner_payouts")
+      .insert(payouts)
+      .select();
+
+    if (error) throw error;
+    return data || [];
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new SupabaseStorage();

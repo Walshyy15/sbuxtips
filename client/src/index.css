@@ -5,29 +5,38 @@
 @tailwind utilities;
 
 :root {
-  /* Material Design 3 Color Tokens - Enhanced Spring Theme */
-  --md-sys-color-primary: 142 76% 73%;      /* Refined Spring green */
-  --md-sys-color-on-primary: 180 35% 20%;   /* Darker text on primary */
-  --md-sys-color-primary-container: 180 25% 28%;
-  --md-sys-color-on-primary-container: 0 0% 98%;
-  
-  --md-sys-color-secondary: 196 70% 75%;    /* Brighter Spring blue */
-  --md-sys-color-on-secondary: 180 35% 20%;
-  --md-sys-color-secondary-container: 180 32% 15%;
-  --md-sys-color-on-secondary-container: 0 0% 98%;
-  
-  --md-sys-color-tertiary: 340 65% 65%;     /* Vibrant Spring accent */
-  --md-sys-color-on-tertiary: 180 35% 20%;
-  --md-sys-color-tertiary-container: 180 22% 32%;
-  --md-sys-color-on-tertiary-container: 0 0% 98%;
-  
-  --md-sys-color-surface: 180 28% 22%;      /* Refined background */
-  --md-sys-color-on-surface: 0 0% 98%;
-  --md-sys-color-surface-variant: 180 25% 28%;
-  --md-sys-color-on-surface-variant: 0 0% 98%;
-  
-  --md-sys-color-outline: 180 22% 38%;
-  --md-sys-color-outline-variant: 180 22% 42%;
+  /* Starbucks Brand Colors */
+  --starbucks-green: 155 64% 23%;           /* #00704A */
+  --starbucks-green-light: 155 54% 33%;     /* #00A862 */
+  --starbucks-green-dark: 155 74% 18%;      /* #005334 */
+
+  --starbucks-cream: 40 33% 94%;            /* #F2F0EB */
+  --starbucks-gray: 0 0% 40%;               /* #666666 */
+  --starbucks-white: 0 0% 100%;             /* #FFFFFF */
+
+  /* Material Design 3 Color Tokens - Starbucks Theme */
+  --md-sys-color-primary: 155 64% 33%;      /* Starbucks green */
+  --md-sys-color-on-primary: 0 0% 100%;     /* White text on green */
+  --md-sys-color-primary-container: 155 54% 43%;
+  --md-sys-color-on-primary-container: 0 0% 100%;
+
+  --md-sys-color-secondary: 40 33% 94%;     /* Cream */
+  --md-sys-color-on-secondary: 155 64% 23%;
+  --md-sys-color-secondary-container: 40 28% 88%;
+  --md-sys-color-on-secondary-container: 155 64% 23%;
+
+  --md-sys-color-tertiary: 0 0% 40%;        /* Gray accent */
+  --md-sys-color-on-tertiary: 0 0% 100%;
+  --md-sys-color-tertiary-container: 0 0% 30%;
+  --md-sys-color-on-tertiary-container: 0 0% 100%;
+
+  --md-sys-color-surface: 40 20% 96%;       /* Light cream background */
+  --md-sys-color-on-surface: 0 0% 13%;      /* Dark text */
+  --md-sys-color-surface-variant: 0 0% 100%;
+  --md-sys-color-on-surface-variant: 0 0% 20%;
+
+  --md-sys-color-outline: 0 0% 80%;
+  --md-sys-color-outline-variant: 0 0% 88%;
   
   /* Enhanced Elevation with more pronounced shadows */
   --md-sys-elevation-level1: 0px 2px 4px rgba(0, 0, 0, 0.2), 0px 1px 3px rgba(0, 0, 0, 0.12), 0px 1px 2px rgba(0, 0, 0, 0.14);
