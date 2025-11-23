@@ -1,27 +1,22 @@
 import { useState } from "react";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription,
-  DialogFooter
-} from "@/components/ui/dialog";
+import { UserPlus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useTipContext } from "@/context/TipContext";
 import { parseManualEntry } from "@/lib/utils";
 
-type ManualEntryModalProps = {
+interface ManualEntryModalProps {
   isOpen: boolean;
   onClose: () => void;
-};
+}
 
 export default function ManualEntryModal({ isOpen, onClose }: ManualEntryModalProps) {
   const [manualInput, setManualInput] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
-  const { setPartnerHours, setExtractedText } = useTipContext();
-  
-  const handleSave = () => {
+
+  const handleProcess = () => {
     if (!manualInput.trim()) {
       toast({
         title: "No data entered",
@@ -30,27 +25,27 @@ export default function ManualEntryModal({ isOpen, onClose }: ManualEntryModalPr
       });
       return;
     }
-    
+
+    setIsProcessing(true);
     try {
       const parsedData = parseManualEntry(manualInput);
-      
+
       if (parsedData.length === 0) {
         toast({
           title: "Invalid format",
-          description: "Please use the format: Name: hours",
+          description: "Please use the format: Name: hours (e.g., John Doe: 32.5)",
           variant: "destructive"
         });
         return;
       }
-      
-      setPartnerHours(parsedData);
-      setExtractedText(manualInput);
-      
+
+      const totalHours = parsedData.reduce((sum, p) => sum + p.hours, 0);
+
       toast({
-        title: "Partners saved",
-        description: `${parsedData.length} partners have been added`,
+        title: "Partners parsed successfully",
+        description: `Found ${parsedData.length} partners with ${totalHours.toFixed(2)} total hours`,
       });
-      
+
       onClose();
     } catch (error) {
       console.error(error);
@@ -59,43 +54,56 @@ export default function ManualEntryModal({ isOpen, onClose }: ManualEntryModalPr
         description: "Please check your input format",
         variant: "destructive"
       });
+    } finally {
+      setIsProcessing(false);
     }
   };
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-2xl bg-[#3a5c5c] border border-[#4c6767] text-[#f5f5f5]">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-[#f5f5f5]">Manual Partner Entry</DialogTitle>
-          <DialogDescription className="text-[#bfbfbf]">
-            Enter partner names and hours, one per line in the format: 
-            <span className="font-mono bg-[#364949] px-2 py-1 rounded ml-2 text-[#f5f5f5]">Name: hours</span>
+          <DialogTitle className="flex items-center gap-2 text-[hsl(var(--starbucks-green))]">
+            <UserPlus className="w-5 h-5" />
+            Manual Partner Entry
+          </DialogTitle>
+          <DialogDescription>
+            Enter partner names and hours, one per line
           </DialogDescription>
         </DialogHeader>
-        
-        <textarea
-          value={manualInput}
-          onChange={(e) => setManualInput(e.target.value)}
-          className="h-64 bg-[#364949] border border-[#4c6767] font-mono resize-none w-full rounded-md text-[#f5f5f5] p-3"
-          placeholder="John Smith: 32
-Maria Garcia: 24
-David Johnson: 40"
-        />
-        
-        <DialogFooter>
-          <button 
-            className="btn btn-transparent mr-2" 
-            onClick={onClose}
-          >
+
+        <div className="space-y-4 py-4">
+          <div className="bg-[hsl(var(--md-sys-color-surface-variant))] rounded-lg p-4 text-sm">
+            <p className="font-semibold mb-2">Format:</p>
+            <code className="block font-mono">Name: hours</code>
+            <p className="mt-2 text-[hsl(var(--starbucks-gray))]">Example:</p>
+            <code className="block font-mono text-xs">
+              John Smith: 32.5<br />
+              Maria Garcia: 24<br />
+              David Johnson: 40
+            </code>
+          </div>
+
+          <Textarea
+            value={manualInput}
+            onChange={(e) => setManualInput(e.target.value)}
+            placeholder="John Smith: 32.5&#10;Maria Garcia: 24&#10;David Johnson: 40"
+            className="h-64 font-mono"
+          />
+        </div>
+
+        <div className="flex gap-3 pt-4 border-t">
+          <Button variant="outline" onClick={onClose} className="flex-1">
             Cancel
-          </button>
-          <button 
-            className="btn btn-primary"
-            onClick={handleSave}
+          </Button>
+          <Button
+            onClick={handleProcess}
+            disabled={!manualInput.trim() || isProcessing}
+            className="flex-1 bg-[hsl(var(--starbucks-green))] hover:bg-[hsl(var(--starbucks-green-dark))] text-white"
           >
-            Save Partners
-          </button>
-        </DialogFooter>
+            {isProcessing ? "Processing..." : "Process Partners"}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
